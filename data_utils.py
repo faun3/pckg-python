@@ -7,6 +7,7 @@ from scipy import stats
 def load_data():
     df = pd.read_csv("amazon.csv")
     conversion_rate = 85.55  # 1 USD = 85.55 INR
+
     df["discounted_price"] = (
         df["discounted_price"]
         .str.replace("₹", "", regex=False)
@@ -25,6 +26,17 @@ def load_data():
     )
     
     df["rating_count"] = df["rating_count"].str.replace(",", "").astype(float)
+
+    # Drop the row where rating is set to "|"
+    # Print problematic values before conversion
+    print(df[~df["rating"].str.replace(".", "", regex=False).str.isdigit()])
+
+    # Or add additional cleaning step
+    df["rating"] = df["rating"].str.strip()  # Remove leading/trailing spaces
+
+    df["rating"] = pd.to_numeric(df["rating"], errors="coerce")
+    df = df.dropna(subset=["rating"])
+
     return df
 
 def impute_missing_values(df, method, numeric_cols):

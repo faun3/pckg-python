@@ -1,3 +1,4 @@
+import math
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -78,6 +79,28 @@ if not categorical_cols or not numeric_cols:
 # --- User Selections for GroupBy/Aggregation ---
 st.subheader("Group-By and Aggregation Settings")
 group_col = st.selectbox("Select a categorical column to group by", ["category", "rating"])
+
+# Add checkbox for coarse rating grouping if grouping by 'rating'
+use_coarse_rating = False
+if group_col == "rating":
+    use_coarse_rating = st.checkbox(
+        "Use coarse rating groups (e.g., [3, 4), [4, 5), ...)",
+        value=True,
+        help="Group ratings into intervals instead of using exact values."
+    )
+    if use_coarse_rating:
+        # Define bins (adjust as needed for your data's rating range)
+        min_rating = np.floor(scaled_df["rating"].astype(float).min())
+        max_rating = np.ceil(scaled_df["rating"].astype(float).max())
+        bins = np.arange(min_rating, max_rating + 1, 1)
+        labels = [f"[{int(bins[i])}, {int(bins[i+1])})" for i in range(len(bins)-1)]
+        scaled_df["rating_group"] = pd.cut(scaled_df["rating"], bins=bins, labels=labels, right=False, include_lowest=True)
+        group_col_actual = "rating_group"
+    else:
+        group_col_actual = "rating"
+else:
+    group_col_actual = group_col
+
 agg_cols = st.multiselect("Select numeric columns to aggregate", numeric_cols, default=numeric_cols[:1])
 agg_funcs = st.multiselect(
     "Select aggregation functions",
@@ -91,7 +114,7 @@ if not agg_cols or not agg_funcs:
 
 # --- Grouped Data ---
 st.subheader(f"Grouped Data: {group_col}")
-grouped = scaled_df.groupby(group_col)[agg_cols].agg(agg_funcs)
+grouped = scaled_df.groupby(group_col_actual)[agg_cols].agg(agg_funcs)
 # Flatten MultiIndex columns if needed
 grouped.columns = [f"{col}_{func}" for col, func in grouped.columns]
 grouped = grouped.reset_index()
@@ -106,7 +129,7 @@ if "mean" in agg_funcs:
     for col in agg_cols:
         if f"{col}_mean" in grouped.columns:
             fig, ax = plt.subplots(figsize=(8, 4))
-            sns.barplot(x=group_col, y=f"{col}_mean", data=grouped, ax=ax)
+            sns.barplot(x=group_col_actual, y=f"{col}_mean", data=grouped, ax=ax)
             ax.set_title(f"Mean of {col} by {group_col}")
             ax.set_ylabel(f"Mean {col}")
             ax.set_xlabel(group_col)
@@ -117,7 +140,7 @@ if "mean" in agg_funcs:
 st.subheader("Boxplot: Distribution by Group")
 for col in agg_cols:
     fig, ax = plt.subplots(figsize=(8, 4))
-    sns.boxplot(x=group_col, y=col, data=scaled_df, ax=ax)
+    sns.boxplot(x=group_col_actual, y=col, data=scaled_df, ax=ax)
     ax.set_title(f"Distribution of {col} by {group_col}")
     ax.set_ylabel(col)
     ax.set_xlabel(group_col)
@@ -129,7 +152,7 @@ if len(agg_cols) > 1 and grouped.shape[0] <= 30:
     st.subheader("Heatmap: Aggregated Values by Group")
     # Use mean if available, else first agg func
     func = "mean" if "mean" in agg_funcs else agg_funcs[0]
-    heatmap_data = grouped.set_index(group_col)[[f"{col}_{func}" for col in agg_cols if f"{col}_{func}" in grouped.columns]]
+    heatmap_data = grouped.set_index(group_col_actual)[[f"{col}_{func}" for col in agg_cols if f"{col}_{func}" in grouped.columns]]
     fig, ax = plt.subplots(figsize=(2 + len(agg_cols), 1 + 0.3 * len(heatmap_data)))
     sns.heatmap(heatmap_data, annot=True, fmt=".2f", cmap="YlGnBu", ax=ax)
     ax.set_title(f"{func.title()} of Numeric Columns by {group_col}")
