@@ -65,7 +65,7 @@ else:
 st.subheader("Step 4: Scaling Numeric Columns")
 scaler_method = st.selectbox(
     "Choose scaling method",
-    ["StandardScaler", "MinMaxScaler", "RobustScaler"],
+    ["None", "StandardScaler", "MinMaxScaler", "RobustScaler"],
 )
 
 scaled_df = scale_numeric(encoded_df, scaler_method, numeric_cols)

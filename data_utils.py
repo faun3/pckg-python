@@ -6,18 +6,24 @@ from scipy import stats
 
 def load_data():
     df = pd.read_csv("amazon.csv")
+    conversion_rate = 85.55  # 1 USD = 85.55 INR
     df["discounted_price"] = (
         df["discounted_price"]
         .str.replace("₹", "", regex=False)
         .str.replace(",", "", regex=False)
         .astype(float)
     )
+    df["discounted_price"] = df["discounted_price"] / conversion_rate
+
     df["actual_price"] = (
         df["actual_price"].str.replace("₹", "").str.replace(",", "").astype(float)
     )
+    df["actual_price"] = df["actual_price"] / conversion_rate
+
     df["discount_percentage"] = (
         df["discount_percentage"].str.replace("%", "").astype(float)
     )
+    
     df["rating_count"] = df["rating_count"].str.replace(",", "").astype(float)
     return df
 
@@ -76,7 +82,7 @@ def encode_category(df, method):
 
 def scale_numeric(df, method, numeric_cols):
     df = df.copy()
-    if not numeric_cols:
+    if not numeric_cols or method == "None":
         return df
     if method == "StandardScaler":
         scaler = StandardScaler()
