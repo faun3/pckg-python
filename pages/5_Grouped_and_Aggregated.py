@@ -1,10 +1,15 @@
-import math
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
-from data_utils import load_data, impute_missing_values, handle_extreme_values, encode_category, scale_numeric
+from data_utils import (
+    load_data,
+    impute_missing_values,
+    handle_extreme_values,
+    encode_category,
+    scale_numeric,
+)
 
 st.header("Grouped and Aggregated Data Analysis")
 
@@ -78,7 +83,9 @@ if not categorical_cols or not numeric_cols:
 
 # --- User Selections for GroupBy/Aggregation ---
 st.subheader("Group-By and Aggregation Settings")
-group_col = st.selectbox("Select a categorical column to group by", ["category", "rating"])
+group_col = st.selectbox(
+    "Select a categorical column to group by", ["category", "rating"]
+)
 
 # Add checkbox for coarse rating grouping if grouping by 'rating'
 use_coarse_rating = False
@@ -86,26 +93,34 @@ if group_col == "rating":
     use_coarse_rating = st.checkbox(
         "Use coarse rating groups (e.g., [3, 4), [4, 5), ...)",
         value=True,
-        help="Group ratings into intervals instead of using exact values."
+        help="Group ratings into intervals instead of using exact values.",
     )
     if use_coarse_rating:
         # Define bins (adjust as needed for your data's rating range)
         min_rating = np.floor(scaled_df["rating"].astype(float).min())
         max_rating = np.ceil(scaled_df["rating"].astype(float).max())
         bins = np.arange(min_rating, max_rating + 1, 1)
-        labels = [f"[{int(bins[i])}, {int(bins[i+1])})" for i in range(len(bins)-1)]
-        scaled_df["rating_group"] = pd.cut(scaled_df["rating"], bins=bins, labels=labels, right=False, include_lowest=True)
+        labels = [f"[{int(bins[i])}, {int(bins[i+1])})" for i in range(len(bins) - 1)]
+        scaled_df["rating_group"] = pd.cut(
+            scaled_df["rating"],
+            bins=bins,
+            labels=labels,
+            right=False,
+            include_lowest=True,
+        )
         group_col_actual = "rating_group"
     else:
         group_col_actual = "rating"
 else:
     group_col_actual = group_col
 
-agg_cols = st.multiselect("Select numeric columns to aggregate", numeric_cols, default=numeric_cols[:1])
+agg_cols = st.multiselect(
+    "Select numeric columns to aggregate", numeric_cols, default=numeric_cols[:1]
+)
 agg_funcs = st.multiselect(
     "Select aggregation functions",
     ["mean", "sum", "min", "max", "count", "median", "std"],
-    default=["mean", "count"]
+    default=["mean", "count"],
 )
 
 if not agg_cols or not agg_funcs:
@@ -152,10 +167,14 @@ if len(agg_cols) > 1 and grouped.shape[0] <= 30:
     st.subheader("Heatmap: Aggregated Values by Group")
     # Use mean if available, else first agg func
     func = "mean" if "mean" in agg_funcs else agg_funcs[0]
-    heatmap_data = grouped.set_index(group_col_actual)[[f"{col}_{func}" for col in agg_cols if f"{col}_{func}" in grouped.columns]]
+    heatmap_data = grouped.set_index(group_col_actual)[
+        [f"{col}_{func}" for col in agg_cols if f"{col}_{func}" in grouped.columns]
+    ]
     fig, ax = plt.subplots(figsize=(2 + len(agg_cols), 1 + 0.3 * len(heatmap_data)))
     sns.heatmap(heatmap_data, annot=True, fmt=".2f", cmap="YlGnBu", ax=ax)
     ax.set_title(f"{func.title()} of Numeric Columns by {group_col}")
     st.pyplot(fig)
 
-st.info("Tip: All group-by and aggregation is performed on data that has been cleaned, encoded, and scaled as per your selections above!") 
+st.info(
+    "Tip: All group-by and aggregation is performed on data that has been cleaned, encoded, and scaled as per your selections above!"
+)
